@@ -3,16 +3,16 @@ import { Helmet } from 'react-helmet';
 import MainNavigation from '../../components/ui/MainNavigation';
 import NotificationIndicator from '../../components/ui/NotificationIndicator';
 import UserProfileDropdown from '../../components/ui/UserProfileDropdown';
-import AuthenticationWrapper from '../../components/ui/AuthenticationWrapper';
-import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
+import Icon from '../../components/AppIcon';
 import IssueForm from './components/IssueForm';
 import IssueCard from './components/IssueCard';
 import IssueDetailModal from './components/IssueDetailModal';
 import IssueFilters from './components/IssueFilters';
+import { useAuth } from '../../contexts/AuthContext';
 
 const IssueReportingPortal = () => {
-  const [isAuthenticated] = useState(true);
+  const { user } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState(null);
   const [filters, setFilters] = useState({
@@ -22,6 +22,95 @@ const IssueReportingPortal = () => {
     priority: ''
   });
   const [currentLanguage, setCurrentLanguage] = useState('en');
+  const [issues, setIssues] = useState([]);
+
+  useEffect(() => {
+    try {
+      const savedIssues = localStorage.getItem('civicLinkIssues');
+      if (savedIssues) {
+        const parsedIssues = JSON.parse(savedIssues);
+        // Validate that parsedIssues is an array
+        if (Array.isArray(parsedIssues)) {
+          // Filter out invalid issue objects
+          const validIssues = parsedIssues.filter(issue =>
+            issue &&
+            typeof issue === 'object' &&
+            issue.id &&
+            issue.title &&
+            issue.description
+          );
+          setIssues(validIssues);
+        } else {
+          console.warn('Invalid issues data in localStorage, resetting to default');
+          localStorage.removeItem('civicLinkIssues');
+          setIssues([]);
+        }
+      } else {
+        // Set default mock data if no saved issues
+        setIssues([
+          {
+            id: 1,
+            referenceNumber: "WV2025001234",
+            category: "infrastructure",
+            title: "Large pothole on Main Street",
+            description: "There is a large pothole near the intersection of Main Street and Park Avenue.",
+            location: "Main Street, Ward 12",
+            priority: "high",
+            status: "in-progress",
+            submittedDate: "2025-12-20T10:30:00",
+            assignedTo: "Municipal Maintenance Team",
+            estimatedResolution: "2025-12-28T17:00:00",
+            images: [
+              {
+                url: "https://images.unsplash.com/photo-1728340964368-59c3192e44e6",
+                alt: "Large pothole on asphalt road"
+              }
+            ],
+            progressHistory: [
+              {
+                status: "Issue Assigned",
+                message: "Issue has been assigned to Municipal Maintenance Team",
+                timestamp: "2025-12-21T09:00:00",
+                updatedBy: "Ward Officer"
+              }
+            ]
+          },
+          {
+            id: 2,
+            referenceNumber: "WV2025001235",
+            category: "sanitation",
+            title: "Overflowing garbage bins",
+            description: "The garbage bins at Market Square have been overflowing.",
+            location: "Market Square, Central Ward",
+            priority: "urgent",
+            status: "pending",
+            submittedDate: "2025-12-23T08:15:00",
+            assignedTo: null,
+            estimatedResolution: null,
+            images: [],
+            progressHistory: []
+          }
+        ]);
+      }
+    } catch (error) {
+      console.error('Error loading saved issues:', error);
+      // Clear corrupted localStorage data
+      localStorage.removeItem('civicLinkIssues');
+      // Reset to empty array
+      setIssues([]);
+    }
+  }, []);
+
+  // Save issues to localStorage whenever issues change
+  useEffect(() => {
+    try {
+      if (issues.length > 0) {
+        localStorage.setItem('civicLinkIssues', JSON.stringify(issues));
+      }
+    } catch (error) {
+      console.error('Error saving issues to localStorage:', error);
+    }
+  }, [issues]);
 
   useEffect(() => {
     const savedLanguage = localStorage.getItem('wardVoiceLanguage');
@@ -30,12 +119,33 @@ const IssueReportingPortal = () => {
     }
   }, []);
 
-  const mockUser = {
-    name: "Rajesh Kumar",
-    email: "rajesh.kumar@example.com",
-    role: "resident",
-    avatar: "https://randomuser.me/api/portraits/men/32.jpg"
-  };
+  const mockUser = (() => {
+    try {
+      if (user && typeof user === 'object') {
+        return {
+          name: user.displayName || user.name || 'User',
+          email: user.email,
+          role: user.role || 'resident',
+          avatar: user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || user.name || 'User')}&background=random`
+        };
+      } else {
+        return {
+          name: 'Guest User',
+          email: null,
+          role: 'guest',
+          avatar: 'https://ui-avatars.com/api/?name=Guest%20User&background=gray'
+        };
+      }
+    } catch (error) {
+      console.error('Error creating mockUser:', error);
+      return {
+        name: 'Guest User',
+        email: null,
+        role: 'guest',
+        avatar: 'https://ui-avatars.com/api/?name=Guest%20User&background=gray'
+      };
+    }
+  })();
 
   const mockNotifications = [
   {
@@ -56,162 +166,6 @@ const IssueReportingPortal = () => {
   }];
 
 
-  const mockIssues = [
-  {
-    id: 1,
-    referenceNumber: "WV2025001234",
-    category: "infrastructure",
-    title: "Large pothole on Main Street causing traffic issues",
-    description: "There is a large pothole near the intersection of Main Street and Park Avenue. It has been causing significant traffic disruption and poses a safety hazard to vehicles and pedestrians. The pothole is approximately 2 feet wide and 6 inches deep.",
-    location: "Main Street, Near Park Avenue Intersection, Ward 12",
-    priority: "high",
-    status: "in-progress",
-    submittedDate: "2025-12-20T10:30:00",
-    assignedTo: "Municipal Maintenance Team",
-    estimatedResolution: "2025-12-28T17:00:00",
-    images: [
-    {
-      url: "https://images.unsplash.com/photo-1728340964368-59c3192e44e6",
-      alt: "Large pothole on asphalt road with visible cracks and damaged surface near intersection"
-    },
-    {
-      url: "https://img.rocket.new/generatedImages/rocket_gen_img_1cd30850c-1765208174343.png",
-      alt: "Close-up view of deep road pothole showing deteriorated pavement and exposed base layer"
-    }],
-
-    progressHistory: [
-    {
-      status: "Issue Assigned",
-      message: "Issue has been assigned to Municipal Maintenance Team for inspection",
-      timestamp: "2025-12-21T09:00:00",
-      updatedBy: "Ward Officer"
-    },
-    {
-      status: "Inspection Completed",
-      message: "Site inspection completed. Repair work scheduled for next week",
-      timestamp: "2025-12-22T14:30:00",
-      updatedBy: "Maintenance Inspector"
-    }]
-
-  },
-  {
-    id: 2,
-    referenceNumber: "WV2025001235",
-    category: "sanitation",
-    title: "Overflowing garbage bins at Market Square",
-    description: "The garbage bins at Market Square have been overflowing for the past three days. This is creating unhygienic conditions and attracting stray animals. Immediate attention required.",
-    location: "Market Square, Central Ward",
-    priority: "urgent",
-    status: "pending",
-    submittedDate: "2025-12-23T08:15:00",
-    assignedTo: null,
-    estimatedResolution: null,
-    images: [
-    {
-      url: "https://img.rocket.new/generatedImages/rocket_gen_img_139a3613b-1765545055009.png",
-      alt: "Overflowing public garbage bins with waste scattered around in urban market area"
-    }],
-
-    progressHistory: []
-  },
-  {
-    id: 3,
-    referenceNumber: "WV2025001236",
-    category: "water",
-    title: "Water leakage from underground pipe",
-    description: "Continuous water leakage observed from underground pipe near residential area. Water is being wasted and creating muddy conditions on the road.",
-    location: "Gandhi Nagar, Sector 4",
-    priority: "high",
-    status: "in-progress",
-    submittedDate: "2025-12-19T16:45:00",
-    assignedTo: "Water Supply Department",
-    estimatedResolution: "2025-12-26T12:00:00",
-    images: [
-    {
-      url: "https://images.unsplash.com/photo-1566687952848-e2cf82d3144c",
-      alt: "Water leaking from underground pipe creating puddle on residential street"
-    }],
-
-    progressHistory: [
-    {
-      status: "Under Investigation",
-      message: "Team dispatched to locate exact source of leakage",
-      timestamp: "2025-12-20T10:00:00",
-      updatedBy: "Water Department"
-    }]
-
-  },
-  {
-    id: 4,
-    referenceNumber: "WV2025001237",
-    category: "electricity",
-    title: "Street light not working for two weeks",
-    description: "The street light pole number SL-234 has not been working for the past two weeks. This is causing safety concerns for residents during night time.",
-    location: "Nehru Road, Near Bus Stand",
-    priority: "medium",
-    status: "resolved",
-    submittedDate: "2025-12-10T19:30:00",
-    assignedTo: "Electrical Maintenance",
-    estimatedResolution: "2025-12-18T17:00:00",
-    images: [],
-    progressHistory: [
-    {
-      status: "Repair Completed",
-      message: "Faulty bulb and wiring replaced. Street light is now functional",
-      timestamp: "2025-12-18T15:30:00",
-      updatedBy: "Electrician Team"
-    }]
-
-  },
-  {
-    id: 5,
-    referenceNumber: "WV2025001238",
-    category: "safety",
-    title: "Broken footpath creating pedestrian hazard",
-    description: "The footpath near school area has multiple broken sections with exposed rebar. This poses a serious safety risk to children and elderly pedestrians.",
-    location: "School Road, Ward 8",
-    priority: "urgent",
-    status: "pending",
-    submittedDate: "2025-12-24T11:20:00",
-    assignedTo: null,
-    estimatedResolution: null,
-    images: [
-    {
-      url: "https://images.unsplash.com/photo-1718286704840-1557768de0f9",
-      alt: "Damaged concrete footpath with broken sections and exposed metal rebar near school zone"
-    }],
-
-    progressHistory: []
-  },
-  {
-    id: 6,
-    referenceNumber: "WV2025001239",
-    category: "health",
-    title: "Stagnant water breeding mosquitoes",
-    description: "Large area of stagnant water has accumulated in the vacant plot. This has become a breeding ground for mosquitoes, increasing health risks in the neighborhood.",
-    location: "Plot No. 45, Residential Area",
-    priority: "high",
-    status: "in-progress",
-    submittedDate: "2025-12-22T07:45:00",
-    assignedTo: "Health Department",
-    estimatedResolution: "2025-12-27T16:00:00",
-    images: [
-    {
-      url: "https://img.rocket.new/generatedImages/rocket_gen_img_139033256-1766640222223.png",
-      alt: "Stagnant water pool in vacant urban plot with visible mosquito larvae breeding"
-    }],
-
-    progressHistory: [
-    {
-      status: "Inspection Scheduled",
-      message: "Health inspector will visit the site tomorrow for assessment",
-      timestamp: "2025-12-23T10:00:00",
-      updatedBy: "Health Officer"
-    }]
-
-  }];
-
-
   const handleFilterChange = (field, value) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
   };
@@ -225,9 +179,81 @@ const IssueReportingPortal = () => {
     });
   };
 
-  const handleFormSubmit = (formData) => {
-    console.log('Issue submitted:', formData);
-    setShowForm(false);
+  const handleFormSubmit = async (formData) => {
+    try {
+      // Convert files to base64 data URLs
+      const images = [];
+      if (formData.files && formData.files.length > 0) {
+        for (const fileObj of formData.files) {
+          try {
+            const base64 = await fileToBase64(fileObj.file);
+            images.push({
+              url: base64,
+              alt: fileObj.name
+            });
+          } catch (error) {
+            console.error('Error converting file to base64:', error);
+            // Continue without this image
+          }
+        }
+      }
+
+      const newIssue = {
+        id: Date.now(),
+        referenceNumber: `WV${new Date().getFullYear()}${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`,
+        category: formData.category,
+        title: formData.title,
+        description: formData.description,
+        location: formData.location,
+        priority: formData.priority,
+        status: 'pending',
+        submittedDate: new Date().toISOString(),
+        assignedTo: null,
+        estimatedResolution: null,
+        images: images,
+        progressHistory: []
+      };
+
+      const updatedIssues = [newIssue, ...issues];
+      setIssues(updatedIssues);
+
+      // Save to localStorage
+      try {
+        localStorage.setItem('civicLinkIssues', JSON.stringify(updatedIssues));
+      } catch (error) {
+        console.error('Error saving to localStorage:', error);
+      }
+
+      setShowForm(false);
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      // You could show an error message to the user here
+    }
+  };
+
+  // Helper function to convert file to base64 with size limit
+  const fileToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      // Check file size (limit to 2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        reject(new Error('File size too large. Please choose a file smaller than 2MB.'));
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const base64 = reader.result;
+        // If it's an image and base64 is too long, try to compress it
+        if (file.type.startsWith('image/') && base64.length > 100000) { // ~75KB
+          // For now, just return the base64. In a real app, you'd compress the image
+          resolve(base64);
+        } else {
+          resolve(base64);
+        }
+      };
+      reader.onerror = error => reject(error);
+    });
   };
 
   const handleFormCancel = () => {
@@ -248,32 +274,49 @@ const IssueReportingPortal = () => {
     localStorage.setItem('wardVoiceLanguage', newLanguage);
   };
 
-  const filteredIssues = mockIssues?.filter((issue) => {
-    const matchesSearch = filters?.search === '' ||
-    issue?.referenceNumber?.toLowerCase()?.includes(filters?.search?.toLowerCase()) ||
-    issue?.title?.toLowerCase()?.includes(filters?.search?.toLowerCase());
-    const matchesCategory = filters?.category === '' || issue?.category === filters?.category;
-    const matchesStatus = filters?.status === '' || issue?.status === filters?.status;
-    const matchesPriority = filters?.priority === '' || issue?.priority === filters?.priority;
+  const filteredIssues = issues?.filter((issue) => {
+    try {
+      if (!issue || typeof issue !== 'object') return false;
 
-    return matchesSearch && matchesCategory && matchesStatus && matchesPriority;
+      const matchesSearch = !filters?.search ||
+        (issue?.referenceNumber?.toLowerCase()?.includes(filters?.search?.toLowerCase())) ||
+        (issue?.title?.toLowerCase()?.includes(filters?.search?.toLowerCase()));
+      const matchesCategory = !filters?.category || issue?.category === filters?.category;
+      const matchesStatus = !filters?.status || issue?.status === filters?.status;
+      const matchesPriority = !filters?.priority || issue?.priority === filters?.priority;
+
+      return matchesSearch && matchesCategory && matchesStatus && matchesPriority;
+    } catch (error) {
+      console.error('Error filtering issue:', error, issue);
+      return false;
+    }
   });
 
   const getStatusCounts = () => {
-    return {
-      total: mockIssues?.length,
-      pending: mockIssues?.filter((i) => i?.status === 'pending')?.length,
-      inProgress: mockIssues?.filter((i) => i?.status === 'in-progress')?.length,
-      resolved: mockIssues?.filter((i) => i?.status === 'resolved')?.length
-    };
+    try {
+      return {
+        total: issues?.length || 0,
+        pending: issues?.filter((i) => i?.status === 'pending')?.length || 0,
+        inProgress: issues?.filter((i) => i?.status === 'in-progress')?.length || 0,
+        resolved: issues?.filter((i) => i?.status === 'resolved')?.length || 0
+      };
+    } catch (error) {
+      console.error('Error calculating status counts:', error);
+      return {
+        total: 0,
+        pending: 0,
+        inProgress: 0,
+        resolved: 0
+      };
+    }
   };
 
   const statusCounts = getStatusCounts();
 
   return (
-    <AuthenticationWrapper isAuthenticated={isAuthenticated}>
+    <>
       <Helmet>
-        <title>Issue Reporting Portal - Ward Voice</title>
+        <title>Issue Reporting Portal - Civic Link</title>
         <meta
           name="description"
           content="Report and track civic issues in your ward. Submit complaints about infrastructure, sanitation, water supply, and more with photo and video documentation." />
@@ -306,61 +349,72 @@ const IssueReportingPortal = () => {
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
-            <div className="bg-card rounded-lg p-4 md:p-5 shadow-sm border border-border">
-              <div className="flex items-center space-x-3 mb-2">
-                <div className="w-10 h-10 md:w-12 md:h-12 bg-primary/10 rounded-md flex items-center justify-center">
-                  <Icon name="FileText" size={20} color="var(--color-primary)" />
-                </div>
-                <div>
-                  <p className="text-xs md:text-sm text-muted-foreground">Total Issues</p>
-                  <p className="text-xl md:text-2xl font-heading font-semibold text-foreground">
-                    {statusCounts?.total}
-                  </p>
-                </div>
-              </div>
-            </div>
+            {(() => {
+              try {
+                return (
+                  <>
+                    <div className="bg-card rounded-lg p-4 md:p-5 shadow-sm border border-border">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <div className="w-10 h-10 md:w-12 md:h-12 bg-primary/10 rounded-md flex items-center justify-center">
+                          <Icon name="FileText" size={20} color="var(--color-primary)" />
+                        </div>
+                        <div>
+                          <p className="text-xs md:text-sm text-muted-foreground">Total Issues</p>
+                          <p className="text-xl md:text-2xl font-heading font-semibold text-foreground">
+                            {statusCounts?.total || 0}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
 
-            <div className="bg-card rounded-lg p-4 md:p-5 shadow-sm border border-border">
-              <div className="flex items-center space-x-3 mb-2">
-                <div className="w-10 h-10 md:w-12 md:h-12 bg-muted rounded-md flex items-center justify-center">
-                  <Icon name="Clock" size={20} color="var(--color-muted-foreground)" />
-                </div>
-                <div>
-                  <p className="text-xs md:text-sm text-muted-foreground">Pending</p>
-                  <p className="text-xl md:text-2xl font-heading font-semibold text-foreground">
-                    {statusCounts?.pending}
-                  </p>
-                </div>
-              </div>
-            </div>
+                    <div className="bg-card rounded-lg p-4 md:p-5 shadow-sm border border-border">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <div className="w-10 h-10 md:w-12 md:h-12 bg-muted rounded-md flex items-center justify-center">
+                          <Icon name="Clock" size={20} color="var(--color-muted-foreground)" />
+                        </div>
+                        <div>
+                          <p className="text-xs md:text-sm text-muted-foreground">Pending</p>
+                          <p className="text-xl md:text-2xl font-heading font-semibold text-foreground">
+                            {statusCounts?.pending || 0}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
 
-            <div className="bg-card rounded-lg p-4 md:p-5 shadow-sm border border-border">
-              <div className="flex items-center space-x-3 mb-2">
-                <div className="w-10 h-10 md:w-12 md:h-12 bg-warning/10 rounded-md flex items-center justify-center">
-                  <Icon name="AlertCircle" size={20} color="var(--color-warning)" />
-                </div>
-                <div>
-                  <p className="text-xs md:text-sm text-muted-foreground">In Progress</p>
-                  <p className="text-xl md:text-2xl font-heading font-semibold text-foreground">
-                    {statusCounts?.inProgress}
-                  </p>
-                </div>
-              </div>
-            </div>
+                    <div className="bg-card rounded-lg p-4 md:p-5 shadow-sm border border-border">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <div className="w-10 h-10 md:w-12 md:h-12 bg-warning/10 rounded-md flex items-center justify-center">
+                          <Icon name="AlertCircle" size={20} color="var(--color-warning)" />
+                        </div>
+                        <div>
+                          <p className="text-xs md:text-sm text-muted-foreground">In Progress</p>
+                          <p className="text-xl md:text-2xl font-heading font-semibold text-foreground">
+                            {statusCounts?.inProgress || 0}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
 
-            <div className="bg-card rounded-lg p-4 md:p-5 shadow-sm border border-border">
-              <div className="flex items-center space-x-3 mb-2">
-                <div className="w-10 h-10 md:w-12 md:h-12 bg-success/10 rounded-md flex items-center justify-center">
-                  <Icon name="CheckCircle" size={20} color="var(--color-success)" />
-                </div>
-                <div>
-                  <p className="text-xs md:text-sm text-muted-foreground">Resolved</p>
-                  <p className="text-xl md:text-2xl font-heading font-semibold text-foreground">
-                    {statusCounts?.resolved}
-                  </p>
-                </div>
-              </div>
-            </div>
+                    <div className="bg-card rounded-lg p-4 md:p-5 shadow-sm border border-border">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <div className="w-10 h-10 md:w-12 md:h-12 bg-success/10 rounded-md flex items-center justify-center">
+                          <Icon name="CheckCircle" size={20} color="var(--color-success)" />
+                        </div>
+                        <div>
+                          <p className="text-xs md:text-sm text-muted-foreground">Resolved</p>
+                          <p className="text-xl md:text-2xl font-heading font-semibold text-foreground">
+                            {statusCounts?.resolved || 0}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                );
+              } catch (error) {
+                console.error('Error rendering status cards:', error);
+                return null;
+              }
+            })()}
           </div>
 
           {!showForm &&
@@ -407,13 +461,20 @@ const IssueReportingPortal = () => {
                   </div> :
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-                    {filteredIssues?.map((issue) =>
-                <IssueCard
-                  key={issue?.id}
-                  issue={issue}
-                  onClick={handleIssueClick} />
-
-                )}
+                    {filteredIssues?.filter(issue => issue && typeof issue === 'object' && issue.id)?.map((issue) => {
+                      try {
+                        return (
+                          <IssueCard
+                            key={issue?.id}
+                            issue={issue}
+                            onClick={handleIssueClick}
+                          />
+                        );
+                      } catch (error) {
+                        console.error('Error rendering issue card:', error, issue);
+                        return null;
+                      }
+                    })}
                   </div>
               }
               </div>
@@ -424,7 +485,8 @@ const IssueReportingPortal = () => {
       {selectedIssue &&
       <IssueDetailModal issue={selectedIssue} onClose={handleCloseModal} />
       }
-    </AuthenticationWrapper>);
+    </>
+  );
 
 };
 

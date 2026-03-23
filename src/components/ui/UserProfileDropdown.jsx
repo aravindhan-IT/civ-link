@@ -1,31 +1,29 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import Icon from '../AppIcon';
 import Image from '../AppImage';
 
-const UserProfileDropdown = ({ 
-  user = { 
-    name: 'Guest User', 
-    email: 'guest@wardvoice.gov.in', 
-    role: 'resident',
-    avatar: null
-  },
-  onLogout,
+const UserProfileDropdown = ({
+  user,
   onLanguageChange
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const handleToggle = () => {
     setIsOpen(!isOpen);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setIsOpen(false);
-    if (onLogout) {
-      onLogout();
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
     }
-    navigate('/login');
   };
 
   const handleProfileClick = () => {
@@ -50,6 +48,8 @@ const UserProfileDropdown = ({
         return 'Councillor';
       case 'representative':
         return 'Representative';
+      case 'guest':
+        return 'Guest';
       case 'resident':
       default:
         return 'Resident';
@@ -62,6 +62,8 @@ const UserProfileDropdown = ({
         return 'Shield';
       case 'representative':
         return 'UserCheck';
+      case 'guest':
+        return 'UserX';
       case 'resident':
       default:
         return 'User';

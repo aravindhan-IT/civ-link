@@ -11,25 +11,25 @@ const MainNavigation = ({ userRole = 'resident', notificationCount = 0, isAuthen
       label: 'Dashboard',
       path: '/home-dashboard',
       icon: 'LayoutDashboard',
-      roleAccess: ['resident', 'councillor', 'representative']
+      roleAccess: ['resident', 'councillor', 'representative', 'guest']
     },
     {
       label: 'Ward Info',
       path: '/ward-updates',
       icon: 'Info',
-      roleAccess: ['resident', 'councillor', 'representative']
+      roleAccess: ['resident', 'councillor', 'representative', 'guest']
     },
     {
       label: 'Report Issue',
       path: '/issue-reporting-portal',
       icon: 'AlertCircle',
-      roleAccess: ['resident', 'councillor', 'representative']
+      roleAccess: ['resident', 'councillor', 'representative', 'guest']
     },
     {
       label: 'Representatives',
       path: '/councillor-profiles',
       icon: 'Users',
-      roleAccess: ['resident', 'councillor', 'representative']
+      roleAccess: ['resident', 'councillor', 'representative', 'guest']
     }
   ];
 

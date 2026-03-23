@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
+import { useAuth } from '../../contexts/AuthContext';
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
 import { Checkbox } from '../../components/ui/Checkbox';
@@ -12,6 +13,7 @@ import TrustSignals from './components/TrustSignals';
 
 const Register = () => {
   const navigate = useNavigate();
+  const { register } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -66,18 +68,11 @@ const Register = () => {
   const validateStep = (step) => {
     const newErrors = {};
 
+    // Minimal validation - only check if required fields have some value
     if (step === 1) {
       if (!formData?.fullName?.trim()) newErrors.fullName = 'Full name is required';
-      if (!formData?.email?.trim()) {
-        newErrors.email = 'Email is required';
-      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/?.test(formData?.email)) {
-        newErrors.email = 'Invalid email format';
-      }
-      if (!formData?.mobile?.trim()) {
-        newErrors.mobile = 'Mobile number is required';
-      } else if (!/^\d{10}$/?.test(formData?.mobile)) {
-        newErrors.mobile = 'Mobile number must be 10 digits';
-      }
+      if (!formData?.email?.trim()) newErrors.email = 'Email is required';
+      if (!formData?.mobile?.trim()) newErrors.mobile = 'Mobile number is required';
       if (!formData?.dateOfBirth) newErrors.dateOfBirth = 'Date of birth is required';
     }
 
@@ -85,30 +80,14 @@ const Register = () => {
       if (!formData?.ward) newErrors.ward = 'Please select your ward';
       if (!formData?.houseNumber?.trim()) newErrors.houseNumber = 'House/Flat number is required';
       if (!formData?.street?.trim()) newErrors.street = 'Street/Area name is required';
-      if (!formData?.pincode?.trim()) {
-        newErrors.pincode = 'PIN code is required';
-      } else if (!/^\d{6}$/?.test(formData?.pincode)) {
-        newErrors.pincode = 'PIN code must be 6 digits';
-      }
+      if (!formData?.pincode?.trim()) newErrors.pincode = 'PIN code is required';
     }
 
     if (step === 3) {
-      if (!formData?.aadhaar?.trim()) {
-        newErrors.aadhaar = 'Aadhaar number is required';
-      } else if (!/^\d{12}$/?.test(formData?.aadhaar)) {
-        newErrors.aadhaar = 'Aadhaar number must be 12 digits';
-      }
-      if (!formData?.identityProof) newErrors.identityProof = 'Identity proof document is required';
-      if (!formData?.password) {
-        newErrors.password = 'Password is required';
-      } else if (formData?.password?.length < 8) {
-        newErrors.password = 'Password must be at least 8 characters';
-      }
-      if (!formData?.confirmPassword) {
-        newErrors.confirmPassword = 'Please confirm your password';
-      } else if (formData?.password !== formData?.confirmPassword) {
-        newErrors.confirmPassword = 'Passwords do not match';
-      }
+      if (!formData?.aadhaar?.trim()) newErrors.aadhaar = 'Aadhaar number is required';
+      if (!formData?.password?.trim()) newErrors.password = 'Password is required';
+      if (!formData?.confirmPassword?.trim()) newErrors.confirmPassword = 'Please confirm your password';
+      if (formData?.password !== formData?.confirmPassword) newErrors.confirmPassword = 'Passwords must match';
     }
 
     setErrors(newErrors);
@@ -129,9 +108,9 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e?.preventDefault();
-    
+
     if (!validateStep(3)) return;
-    
+
     if (!termsAccepted) {
       alert('Please accept the terms and conditions to continue');
       return;
@@ -139,11 +118,39 @@ const Register = () => {
 
     setIsLoading(true);
 
-    setTimeout(() => {
+    try {
+      await register(formData.email, formData.password, {
+        name: formData.fullName,
+        phone: formData.mobile,
+        dateOfBirth: formData.dateOfBirth,
+        ward: formData.ward,
+        address: `${formData.houseNumber}, ${formData.street}, ${formData.landmark}`,
+        pincode: formData.pincode,
+        aadhaar: formData.aadhaar,
+        role: 'resident' // Default role
+      });
+
+      alert('Registration successful! Please check your email for verification.');
+      navigate('/home-dashboard');
+    } catch (error) {
+      console.error('Registration error:', error);
+      let errorMessage = `Registration failed: ${error.message}`;
+
+      // Firebase specific error codes
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'This email is already registered. Please use a different email.';
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'Password must be at least 6 characters long.';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Please provide a valid email address (e.g., user@example.com).';
+      } else if (error.code === 'auth/operation-not-allowed') {
+        errorMessage = 'Email/password registration is not enabled. Please use guest access or try again later.';
+      }
+
+      alert(errorMessage);
+    } finally {
       setIsLoading(false);
-      alert('Registration successful! Please check your email for verification link.\n\nMock Credentials:\nEmail: resident@wardvoice.gov.in\nPassword: Resident@123');
-      navigate('/login');
-    }, 2000);
+    }
   };
 
   return (

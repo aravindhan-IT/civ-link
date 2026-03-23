@@ -19,7 +19,7 @@ const VerificationForm = ({ formData, errors, onChange, onFileChange }) => {
       />
       <div className="space-y-2">
         <label className="block text-sm font-medium text-foreground">
-          Upload Identity Proof <span className="text-destructive">*</span>
+          Upload Identity Proof <span className="text-muted-foreground">(Optional)</span>
         </label>
         <p className="text-xs text-muted-foreground">
           Accepted: Aadhaar Card, Voter ID, Driving License (Max 5MB, PDF/JPG/PNG)

@@ -1,38 +1,31 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../contexts/AuthContext';
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
 import Icon from '../../../components/AppIcon';
 
 const LoginForm = ({ onLanguageChange, currentLanguage }) => {
   const navigate = useNavigate();
+  const { login, loginAsGuest } = useAuth();
   const [formData, setFormData] = useState({
-    username: '',
+    email: '',
     password: ''
   });
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const mockCredentials = [
-    { username: 'resident@wardvoice.gov.in', password: 'Resident@123', role: 'resident' },
-    { username: 'councillor@wardvoice.gov.in', password: 'Council@456', role: 'councillor' },
-    { username: 'representative@wardvoice.gov.in', password: 'Rep@789', role: 'representative' }
-  ];
-
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData?.username?.trim()) {
-      newErrors.username = currentLanguage === 'en' ?'Username or email is required' :'उपयोगकर्ता नाम या ईमेल आवश्यक है';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/?.test(formData?.username) && !formData?.username?.includes('@')) {
-      newErrors.username = currentLanguage === 'en' ?'Please enter a valid email address' :'कृपया एक मान्य ईमेल पता दर्ज करें';
+    // Minimal validation - only check if fields are not empty
+    if (!formData?.email?.trim()) {
+      newErrors.email = currentLanguage === 'en' ? 'Email is required' : 'ईमेल आवश्यक है';
     }
 
-    if (!formData?.password) {
-      newErrors.password = currentLanguage === 'en' ?'Password is required' :'पासवर्ड आवश्यक है';
-    } else if (formData?.password?.length < 6) {
-      newErrors.password = currentLanguage === 'en' ?'Password must be at least 6 characters' :'पासवर्ड कम से कम 6 अक्षर का होना चाहिए';
+    if (!formData?.password?.trim()) {
+      newErrors.password = currentLanguage === 'en' ? 'Password is required' : 'पासवर्ड आवश्यक है';
     }
 
     setErrors(newErrors);
@@ -55,36 +48,60 @@ const LoginForm = ({ onLanguageChange, currentLanguage }) => {
 
   const handleSubmit = async (e) => {
     e?.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
 
     setIsLoading(true);
+    setErrors({});
 
-    setTimeout(() => {
-      const validCredential = mockCredentials?.find(
-        cred => cred?.username === formData?.username && cred?.password === formData?.password
-      );
+    try {
+      await login(formData.email, formData.password);
+      navigate('/home-dashboard');
+    } catch (error) {
+      console.error('Login error:', error);
+      let errorMessage = currentLanguage === 'en'
+        ? `Login failed: ${error.message}`
+        : `लॉगिन विफल: ${error.message}`;
 
-      if (validCredential) {
-        localStorage.setItem('isAuthenticated', 'true');
-        localStorage.setItem('userRole', validCredential?.role);
-        localStorage.setItem('userEmail', validCredential?.username);
-        navigate('/home-dashboard');
-      } else {
-        setErrors({
-          form: currentLanguage === 'en' ?'Invalid credentials. Please check your username and password.' :'अमान्य क्रेडेंशियल। कृपया अपना उपयोगकर्ता नाम और पासवर्ड जांचें।'
-        });
+      if (error.code === 'auth/user-not-found') {
+        errorMessage = currentLanguage === 'en'
+          ? 'No account found with this email. Please register first.'
+          : 'इस ईमेल पते के साथ कोई खाता नहीं मिला। कृपया पहले पंजीकरण करें।';
+      } else if (error.code === 'auth/wrong-password') {
+        errorMessage = currentLanguage === 'en'
+          ? 'Incorrect password. Please try again.'
+          : 'गलत पासवर्ड। कृपया पुनः प्रयास करें।';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = currentLanguage === 'en'
+          ? 'Too many failed attempts. Please try again later.'
+          : 'बहुत सारे विफल प्रयास। कृपया बाद में पुनः प्रयास करें।';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = currentLanguage === 'en'
+          ? 'Invalid email format. Please provide a valid email (e.g., user@example.com).'
+          : 'अमान्य ईमेल प्रारूप। कृपया वैध ईमेल प्रदान करें।';
       }
+
+      setErrors({ form: errorMessage });
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
-  const handleGuestAccess = () => {
-    localStorage.setItem('isAuthenticated', 'false');
-    localStorage.setItem('userRole', 'guest');
-    navigate('/home-dashboard');
+  const handleGuestAccess = async () => {
+    setIsLoading(true);
+    setErrors({});
+
+    try {
+      await loginAsGuest();
+      navigate('/home-dashboard');
+    } catch (error) {
+      console.error('Guest login error:', error);
+      setErrors({ form: currentLanguage === 'en' ? 'Failed to continue as guest. Please try again.' : 'गेस्ट के रूप में जारी रखने में विफल। कृपया पुनः प्रयास करें।' });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -98,13 +115,13 @@ const LoginForm = ({ onLanguageChange, currentLanguage }) => {
         </div>
       )}
       <Input
-        label={currentLanguage === 'en' ? 'Username or Email' : 'उपयोगकर्ता नाम या ईमेल'}
+        label={currentLanguage === 'en' ? 'Email Address' : 'ईमेल पता'}
         type="email"
-        name="username"
+        name="email"
         placeholder={currentLanguage === 'en' ? 'Enter your email address' : 'अपना ईमेल पता दर्ज करें'}
-        value={formData?.username}
+        value={formData?.email}
         onChange={handleChange}
-        error={errors?.username}
+        error={errors?.email}
         required
         disabled={isLoading}
       />
