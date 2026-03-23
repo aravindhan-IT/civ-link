@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import MainNavigation from '../../components/ui/MainNavigation';
-import NotificationIndicator from '../../components/ui/NotificationIndicator';
-import UserProfileDropdown from '../../components/ui/UserProfileDropdown';
 import AuthenticationWrapper from '../../components/ui/AuthenticationWrapper';
 import TabNavigation from './components/TabNavigation';
 import FilterControls from './components/FilterControls';
@@ -210,50 +208,15 @@ const WardUpdates = () => {
   }];
 
 
-  const notifications = [
-  {
-    id: 1,
-    category: 'announcement',
-    title: 'New Budget Approved',
-    message: 'FY 2024-25 budget has been approved with increased allocation for infrastructure.',
-    timestamp: new Date(Date.now() - 3600000),
-    read: false
-  },
-  {
-    id: 2,
-    category: 'issue',
-    title: 'Meeting Scheduled',
-    message: 'Ward meeting scheduled for 28/12/2024 at 10:00 AM.',
-    timestamp: new Date(Date.now() - 7200000),
-    read: false
-  }];
-
-
   const currentUser = {
-    name: 'Amit Patel',
-    email: 'amit.patel@wardvoice.gov.in',
+    name: 'Aravindhan',
+    email: 'aravindhan@wardvoice.gov.in',
     role: 'resident',
-    avatar: "https://img.rocket.new/generatedImages/rocket_gen_img_1bafb5581-1765266098370.png"
+    avatar: "C:\\Users\\Aravindhan\\OneDrive\\Desktop\\testing file\\civ-link\\Passport photo .png"
   };
 
   const handleExport = (format) => {
     console.log(`Exporting data in ${format} format`);
-  };
-
-  const handleNotificationClick = (notification) => {
-    console.log('Notification clicked:', notification);
-  };
-
-  const handleMarkAsRead = (notificationId) => {
-    console.log('Marking notification as read:', notificationId);
-  };
-
-  const handleClearAll = () => {
-    console.log('Clearing all notifications');
-  };
-
-  const handleLogout = () => {
-    console.log('User logged out');
   };
 
   return (
@@ -265,23 +228,7 @@ const WardUpdates = () => {
       <div className="min-h-screen bg-background">
         <MainNavigation
           userRole={currentUser?.role}
-          notificationCount={notifications?.filter((n) => !n?.read)?.length}
           isAuthenticated={true} />
-
-
-        <div className="fixed top-4 right-4 z-50 flex items-center space-x-2">
-          <NotificationIndicator
-            notifications={notifications}
-            onNotificationClick={handleNotificationClick}
-            onMarkAsRead={handleMarkAsRead}
-            onClearAll={handleClearAll} />
-
-          <UserProfileDropdown
-            user={currentUser}
-            onLogout={handleLogout}
-            onLanguageChange={handleLanguageChange} />
-
-        </div>
 
         <div className="pt-16">
           <div className="bg-primary text-primary-foreground py-6 md:py-8 lg:py-12">
